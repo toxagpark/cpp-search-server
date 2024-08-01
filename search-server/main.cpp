@@ -115,7 +115,6 @@ private:
 
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
-        // Word shouldn't be empty
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
@@ -145,10 +144,10 @@ private:
             if (word_to_document_freqs_.count(word) == 0) {
                 continue;
             }
-            
-            double IDF = log(document_count_ / word_to_document_freqs_.at(word).size());
+            int count_documents_with_word_ = word_to_document_freqs_.at(word).size();
+            double IDF = log(document_count_ / count_documents_with_word_);
             for (const auto& [document_id, rel] : word_to_document_freqs_.at(word)) {
-                document_to_relevance[document_id] += IDF* rel;
+                document_to_relevance[document_id] += IDF * rel;
             }
         }
 
