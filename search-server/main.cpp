@@ -115,6 +115,7 @@ private:
 
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
+        // Word shouldn't be empty
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
@@ -138,16 +139,21 @@ private:
         return query;
     }
 
+    double FindIDF(const string word) const {
+        double IDF = log(document_count_ / word_to_document_freqs_.at(word).size());
+        return IDF;
+    }
+
     vector<Document> FindAllDocuments(const Query& query) const {
         map<int, double> document_to_relevance;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
                 continue;
             }
-            int count_documents_with_word_ = word_to_document_freqs_.at(word).size();
-            double IDF = log(document_count_ / count_documents_with_word_);
+            
+            double IDF = FindIDF(word);
             for (const auto& [document_id, rel] : word_to_document_freqs_.at(word)) {
-                document_to_relevance[document_id] += IDF * rel;
+                document_to_relevance[document_id] += IDF* rel;
             }
         }
 
