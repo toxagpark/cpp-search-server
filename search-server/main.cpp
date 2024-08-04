@@ -139,7 +139,7 @@ private:
         return query;
     }
 
-    double FindIDF(const string word) const {
+    double FindIDF(const string& word) const {
         double IDF = log(document_count_ / word_to_document_freqs_.at(word).size());
         return IDF;
     }
