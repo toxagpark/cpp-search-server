@@ -83,23 +83,29 @@ class SearchServer {
 public:
     template <typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words)
-        : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
-        CheckIsValidWord(MakeUniqueNonEmptyStrings(stop_words)); //check set
+        : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) 
+    {
+        // Спасибо за ревью, ошибки исправил))
+        //Что делать здесь, раньше проверял через CheckIsValid, но теперь его здесь нет
+        //нужно ли вообще проверять стопслова на спецсимволы, если да то каким образом это лучше реализовать
+        //я могу предложить внести MakeUniqueNonEmptyStrings в класс, и добавить проверку в него
     }
 
     explicit SearchServer(const string& stop_words_text)
         : SearchServer(
-            SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
+            SplitIntoWords(stop_words_text))
     {
     }
 
     void AddDocument(int document_id, const string& document, DocumentStatus status,
         const vector<int>& ratings) {
-        if (document_id < 0 || documents_.count(document_id) != 0) {
-            throw invalid_argument("Неправильный ID");
+        if (document_id < 0) {
+            throw invalid_argument("ID меньше 0"s);
+        }
+        if (documents_.count(document_id) != 0) {
+            throw invalid_argument("документ с данным ID уже существует"s);
         }
         const vector<string> words = SplitIntoWordsNoStop(document);
-        CheckIsValidWord(words); // здесь не set а vector значит не зря темплейт
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
             word_to_document_freqs_[word][document_id] += inv_word_count;
@@ -116,9 +122,6 @@ public:
 
         const Query query = ParseQuery(raw_query);
 
-        CheckMinusWords(query.minus_words);
-        CheckIsValidWord(query.plus_words);
-        CheckIsValidWord(query.minus_words);
 
         auto matched_documents = FindAllDocuments(query, document_predicate);
 
@@ -150,7 +153,7 @@ public:
 
     int GetDocumentId(int index) const {
         if (index < 0 or index >= document_ids_.size()) {
-            throw out_of_range("инвалид ID"s);
+            throw out_of_range("неправильный ID"s);
         }
         return document_ids_.at(index);
     }
@@ -169,9 +172,6 @@ public:
                 throw invalid_argument("неправильное минус-слово"s);
             }
         }
-        CheckMinusWords(query.minus_words);
-        CheckIsValidWord(query.plus_words);
-        CheckIsValidWord(query.minus_words);
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
                 continue;
@@ -201,23 +201,6 @@ private:
             });
     }
 
-    template <typename Words>
-    void CheckIsValidWord(const Words& words) const {
-        for (const string& i : words) {
-            if (!IsValidWord(i)) {
-                throw invalid_argument("Слова не валид"s);
-            }
-        }
-    }
-
-    void CheckMinusWords(const set<string>& minus_words_check) const {
-        for (const string& i : minus_words_check) {
-            if (i[0] == '-' || i.empty()) { // аккуратно мб ошибка
-                throw invalid_argument("неправильное минус-слово"s);
-            }
-        }
-    }
-
     vector<int> document_ids_;
 
     struct DocumentData {
@@ -236,6 +219,9 @@ private:
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
             if (!IsStopWord(word)) {
+                if (!IsValidWord(word)) {
+                    throw invalid_argument("слово не должно содержать спецсимволы"s);
+                }
                 words.push_back(word);
             }
         }
@@ -261,10 +247,19 @@ private:
 
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
+        if (!IsValidWord(text)) {
+            throw invalid_argument("слово не должно содержать спецсимволы"s);
+        }
         // Word shouldn't be empty
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
+            if (text[0] == '-') {
+                throw invalid_argument("два минуса перед словом"s);
+            }
+            if (text.empty()) {
+                throw invalid_argument("пустое минус-слово"s);
+            }
         }
         return { text, is_minus, IsStopWord(text) };
     }
