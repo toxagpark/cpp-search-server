@@ -85,10 +85,9 @@ public:
     explicit SearchServer(const StringContainer& stop_words)
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) 
     {
-        // Спасибо за ревью, ошибки исправил))
-        //Что делать здесь, раньше проверял через CheckIsValid, но теперь его здесь нет
-        //нужно ли вообще проверять стопслова на спецсимволы, если да то каким образом это лучше реализовать
-        //я могу предложить внести MakeUniqueNonEmptyStrings в класс, и добавить проверку в него
+        if (!all_of(stop_words.begin(), stop_words.end(), IsValidWord)) {
+            throw invalid_argument("слово не должно содержать спецсимволы"s);
+        }
     }
 
     explicit SearchServer(const string& stop_words_text)
@@ -167,11 +166,6 @@ public:
         int document_id) const {
         const Query query = ParseQuery(raw_query);
         vector<string> matched_words;
-        for (string i : query.minus_words) {
-            if (i[0] == '-' || i.empty()) { // аккуратно мб ошибка
-                throw invalid_argument("неправильное минус-слово"s);
-            }
-        }
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
                 continue;
