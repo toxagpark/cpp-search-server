@@ -109,3 +109,21 @@ int SearchServer::ComputeAverageRating(const std::vector<int>& ratings) {
 double SearchServer::ComputeWordInverseDocumentFreq(const std::string& word) const {
     return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
 }
+
+
+SearchServer::QueryWord SearchServer::ParseQueryWord(const std::string& text) const {
+    if (text.empty()) {
+        throw std::invalid_argument("Query word is empty");
+    }
+    std::string word = text;
+    bool is_minus = false;
+    if (word[0] == '-') {
+        is_minus = true;
+        word = word.substr(1);
+    }
+    if (word.empty() || word[0] == '-' || !IsValidWord(word)) {
+        throw std::invalid_argument("Query word " + text + " is invalid");
+    }
+
+    return { word, is_minus, IsStopWord(word) };
+}
